@@ -36,10 +36,14 @@ class DeepStack(DetectionApi):
     def get_label_index(self, label_value):
         if label_value.lower() == "truck":
             label_value = "car"
-        for index, value in self.labels.items():
-            if value == label_value.lower():
-                return index
-        return -1
+        return next(
+            (
+                index
+                for index, value in self.labels.items()
+                if value == label_value.lower()
+            ),
+            -1,
+        )
 
     def detect_raw(self, tensor_input):
         image_data = np.squeeze(tensor_input).astype(np.uint8)
@@ -61,11 +65,11 @@ class DeepStack(DetectionApi):
         for i, detection in enumerate(response_json.get("predictions")):
             logger.debug(f"Response: {detection}")
             if detection["confidence"] < 0.4:
-                logger.debug(f"Break due to confidence < 0.4")
+                logger.debug("Break due to confidence < 0.4")
                 break
             label = self.get_label_index(detection["label"])
             if label < 0:
-                logger.debug(f"Break due to unknown label")
+                logger.debug("Break due to unknown label")
                 break
             detections[i] = [
                 label,

@@ -40,17 +40,13 @@ logger = logging.getLogger(__name__)
 
 def filtered(obj, objects_to_track, object_filters):
     object_name = obj[0]
-    object_score = obj[1]
-    object_box = obj[2]
-    object_area = obj[3]
-    object_ratio = obj[4]
-
-    if not object_name in objects_to_track:
+    if object_name not in objects_to_track:
         return True
 
     if object_name in object_filters:
         obj_settings = object_filters[object_name]
 
+        object_area = obj[3]
         # if the min area is larger than the
         # detected object, don't add it to detected objects
         if obj_settings.min_area > object_area:
@@ -61,9 +57,12 @@ def filtered(obj, objects_to_track, object_filters):
         if obj_settings.max_area < object_area:
             return True
 
+        object_score = obj[1]
         # if the score is lower than the min_score, skip
         if obj_settings.min_score > object_score:
             return True
+
+        object_ratio = obj[4]
 
         # if the object is not proportionally wide enough
         if obj_settings.min_ratio > object_ratio:
@@ -73,7 +72,8 @@ def filtered(obj, objects_to_track, object_filters):
         if obj_settings.max_ratio < object_ratio:
             return True
 
-        if not obj_settings.mask is None:
+        if obj_settings.mask is not None:
+            object_box = obj[2]
             # compute the coordinates of the object and make sure
             # the location isn't outside the bounds of the image (can happen from rounding)
             object_xmin = object_box[0]
@@ -131,16 +131,16 @@ def start_or_restart_ffmpeg(
     if ffmpeg_process is not None:
         stop_ffmpeg(ffmpeg_process, logger)
 
-    if frame_size is None:
-        process = sp.Popen(
+    return (
+        sp.Popen(
             ffmpeg_cmd,
             stdout=sp.DEVNULL,
             stderr=logpipe,
             stdin=sp.DEVNULL,
             start_new_session=True,
         )
-    else:
-        process = sp.Popen(
+        if frame_size is None
+        else sp.Popen(
             ffmpeg_cmd,
             stdout=sp.PIPE,
             stderr=logpipe,
@@ -148,7 +148,7 @@ def start_or_restart_ffmpeg(
             bufsize=frame_size * 10,
             start_new_session=True,
         )
-    return process
+    )
 
 
 def capture_frames(
@@ -499,9 +499,7 @@ def track_camera(
 
 
 def box_overlaps(b1, b2):
-    if b1[2] < b2[0] or b1[0] > b2[2] or b1[1] > b2[3] or b1[3] < b2[1]:
-        return False
-    return True
+    return b1[2] >= b2[0] and b1[0] <= b2[2] and b1[1] <= b2[3] and b1[3] >= b2[1]
 
 
 def reduce_boxes(boxes, iou_threshold=0.0):
@@ -524,10 +522,7 @@ def reduce_boxes(boxes, iou_threshold=0.0):
 
 
 def intersects_any(box_a, boxes):
-    for box in boxes:
-        if box_overlaps(box_a, box):
-            return True
-    return False
+    return any(box_overlaps(box_a, box) for box in boxes)
 
 
 def detect(
@@ -604,7 +599,7 @@ def process_frames(
 
     while not stop_event.is_set():
         if exit_on_empty and frame_queue.empty():
-            logger.info(f"Exiting track_objects...")
+            logger.info("Exiting track_objects...")
             break
 
         try:
@@ -655,7 +650,7 @@ def process_frames(
             tracked_object_boxes = [
                 obj["box"]
                 for obj in object_tracker.tracked_objects.values()
-                if not obj["id"] in stationary_object_ids
+                if obj["id"] not in stationary_object_ids
             ]
 
             # combine motion boxes with known locations of existing objects
@@ -801,15 +796,15 @@ def process_frames(
                 if refining:
                     refine_count += 1
 
-            ## drop detections that overlap too much
-            consolidated_detections = []
-
             # if detection was run on this frame, consolidate
-            if len(regions) > 0:
+            if regions:
                 # group by name
                 detected_object_groups = defaultdict(lambda: [])
                 for detection in detections:
                     detected_object_groups[detection[0]].append(detection)
+
+                ## drop detections that overlap too much
+                consolidated_detections = []
 
                 # loop over detections grouped by label
                 for group in detected_object_groups.values():
@@ -843,7 +838,6 @@ def process_frames(
                             )
                 # now that we have refined our detections, we need to track objects
                 object_tracker.match_and_update(frame_time, consolidated_detections)
-            # else, just update the frame times for the stationary objects
             else:
                 object_tracker.update_frame_times(frame_time)
 

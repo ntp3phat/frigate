@@ -252,7 +252,7 @@ class RecordingMaintainer(threading.Thread):
                 ]
             )
 
-            motion_count += sum([area(box) for box in frame[2]])
+            motion_count += sum(area(box) for box in frame[2])
 
         return (motion_count, active_count)
 
@@ -394,4 +394,4 @@ class RecordingMaintainer(threading.Thread):
             duration = datetime.datetime.now().timestamp() - run_start
             wait_time = max(0, 5 - duration)
 
-        logger.info(f"Exiting recording maintenance...")
+        logger.info("Exiting recording maintenance...")

@@ -487,7 +487,7 @@ class CameraFfmpegConfig(FfmpegConfig):
         if len(roles) > len(roles_set):
             raise ValueError("Each input role may only be used once.")
 
-        if not "detect" in roles:
+        if "detect" not in roles:
             raise ValueError("The detect role is required.")
 
         return v
@@ -718,7 +718,7 @@ class CameraConfig(FrigateBaseModel):
             )
 
         # if there arent any outputs enabled for this input
-        if len(ffmpeg_output_args) == 0:
+        if not ffmpeg_output_args:
             return None
 
         global_args = get_ffmpeg_arg_list(
@@ -773,15 +773,15 @@ class LoggerConfig(FrigateBaseModel):
 def verify_config_roles(camera_config: CameraConfig) -> None:
     """Verify that roles are setup in the config correctly."""
     assigned_roles = list(
-        set([r for i in camera_config.ffmpeg.inputs for r in i.roles])
+        {r for i in camera_config.ffmpeg.inputs for r in i.roles}
     )
 
-    if camera_config.record.enabled and not "record" in assigned_roles:
+    if camera_config.record.enabled and "record" not in assigned_roles:
         raise ValueError(
             f"Camera {camera_config.name} has record enabled, but record is not assigned to an input."
         )
 
-    if camera_config.rtmp.enabled and not "rtmp" in assigned_roles:
+    if camera_config.rtmp.enabled and "rtmp" not in assigned_roles:
         raise ValueError(
             f"Camera {camera_config.name} has rtmp enabled, but rtmp is not assigned to an input."
         )
@@ -947,9 +947,9 @@ class FrigateConfig(FrigateBaseModel):
             if camera_config.detect.max_disappeared is None:
                 camera_config.detect.max_disappeared = max_disappeared
 
-            # Default stationary_threshold configuration
-            stationary_threshold = camera_config.detect.fps * 10
             if camera_config.detect.stationary.threshold is None:
+                # Default stationary_threshold configuration
+                stationary_threshold = camera_config.detect.fps * 10
                 camera_config.detect.stationary.threshold = stationary_threshold
 
             # FFMPEG input substitution
@@ -1062,7 +1062,7 @@ class FrigateConfig(FrigateBaseModel):
                 config.model.dict(exclude_unset=True),
             )
 
-            if not "path" in merged_model:
+            if "path" not in merged_model:
                 if detector_config.type == "cpu":
                     merged_model["path"] = "/cpu_model.tflite"
                 elif detector_config.type == "edgetpu":
@@ -1081,7 +1081,7 @@ class FrigateConfig(FrigateBaseModel):
     def ensure_zones_and_cameras_have_different_names(cls, v: Dict[str, CameraConfig]):
         zones = [zone for camera in v.values() for zone in camera.zones.keys()]
         for zone in zones:
-            if zone in v.keys():
+            if zone in v:
                 raise ValueError("Zones cannot share names with cameras")
         return v
 

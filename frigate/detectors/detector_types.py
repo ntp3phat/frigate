@@ -14,7 +14,9 @@ from .detector_config import BaseDetectorConfig
 logger = logging.getLogger(__name__)
 
 
-_included_modules = pkgutil.iter_modules(plugins.__path__, plugins.__name__ + ".")
+_included_modules = pkgutil.iter_modules(
+    plugins.__path__, f"{plugins.__name__}."
+)
 
 plugin_modules = []
 

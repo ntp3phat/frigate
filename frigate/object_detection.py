@@ -39,11 +39,7 @@ class LocalObjectDetector(ObjectDetector):
         labels=None,
     ):
         self.fps = EventsPerSecond()
-        if labels is None:
-            self.labels = {}
-        else:
-            self.labels = load_labels(labels)
-
+        self.labels = {} if labels is None else load_labels(labels)
         if detector_config:
             self.input_transform = tensor_transform(detector_config.model.input_tensor)
         else:
@@ -98,7 +94,7 @@ def run_detector(
     object_detector = LocalObjectDetector(detector_config=detector_config)
 
     outputs = {}
-    for name in out_events.keys():
+    for name in out_events:
         out_shm = mp.shared_memory.SharedMemory(name=f"out-{name}", create=False)
         out_np = np.ndarray((20, 6), dtype=np.float32, buffer=out_shm.buf)
         outputs[name] = {"shm": out_shm, "np": out_np}
@@ -161,7 +157,7 @@ class ObjectDetectProcess:
 
     def start_or_restart(self):
         self.detection_start.value = 0.0
-        if (not self.detect_process is None) and self.detect_process.is_alive():
+        if self.detect_process is not None and self.detect_process.is_alive():
             self.stop()
         self.detect_process = mp.Process(
             target=run_detector,

@@ -51,7 +51,7 @@ def start(id, num_detections, detection_queue, event):
     start = datetime.datetime.now().timestamp()
 
     frame_times = []
-    for x in range(0, num_detections):
+    for _ in range(0, num_detections):
         start_frame = datetime.datetime.now().timestamp()
         detections = object_detector.detect(my_frame)
         frame_times.append(datetime.datetime.now().timestamp() - start_frame)
@@ -78,9 +78,7 @@ def start(id, num_detections, detection_queue, event):
 ####
 camera_processes = []
 
-events = {}
-for x in range(0, 10):
-    events[str(x)] = mp.Event()
+events = {str(x): mp.Event() for x in range(0, 10)}
 detection_queue = mp.Queue()
 edgetpu_process_1 = ObjectDetectProcess(
     detection_queue, events, DetectorTypeEnum.edgetpu, "usb:0"

@@ -173,4 +173,4 @@ class EventCleanup(threading.Thread):
             )
             delete_query.execute()
 
-        logger.info(f"Exiting event cleanup...")
+        logger.info("Exiting event cleanup...")

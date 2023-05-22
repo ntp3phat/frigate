@@ -114,12 +114,11 @@ class MqttClient(Communicator):  # type: ignore[misc]
                 logger.error("Unable to connect to MQTT server: MQTT Not authorized")
             else:
                 logger.error(
-                    "Unable to connect to MQTT server: Connection refused. Error code: "
-                    + str(rc)
+                    f"Unable to connect to MQTT server: Connection refused. Error code: {str(rc)}"
                 )
 
-        self.connected = True
         logger.debug("MQTT connected")
+        self.connected = True
         client.subscribe(f"{self.mqtt_config.topic_prefix}/#")
         self._set_initial_topics()
 
@@ -135,7 +134,7 @@ class MqttClient(Communicator):  # type: ignore[misc]
         self.client = mqtt.Client(client_id=self.mqtt_config.client_id)
         self.client.on_connect = self._on_connect
         self.client.will_set(
-            self.mqtt_config.topic_prefix + "/available",
+            f"{self.mqtt_config.topic_prefix}/available",
             payload="offline",
             qos=1,
             retain=True,
@@ -177,10 +176,10 @@ class MqttClient(Communicator):  # type: ignore[misc]
             f"{self.mqtt_config.topic_prefix}/restart", self.on_mqtt_command
         )
 
-        if not self.mqtt_config.tls_ca_certs is None:
+        if self.mqtt_config.tls_ca_certs is not None:
             if (
-                not self.mqtt_config.tls_client_cert is None
-                and not self.mqtt_config.tls_client_key is None
+                self.mqtt_config.tls_client_cert is not None
+                and self.mqtt_config.tls_client_key is not None
             ):
                 self.client.tls_set(
                     self.mqtt_config.tls_ca_certs,
@@ -189,9 +188,9 @@ class MqttClient(Communicator):  # type: ignore[misc]
                 )
             else:
                 self.client.tls_set(self.mqtt_config.tls_ca_certs)
-        if not self.mqtt_config.tls_insecure is None:
+        if self.mqtt_config.tls_insecure is not None:
             self.client.tls_insecure_set(self.mqtt_config.tls_insecure)
-        if not self.mqtt_config.user is None:
+        if self.mqtt_config.user is not None:
             self.client.username_pw_set(
                 self.mqtt_config.user, password=self.mqtt_config.password
             )

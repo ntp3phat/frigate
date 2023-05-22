@@ -45,9 +45,8 @@ def deep_merge(dct1: dict, dct2: dict, override=False, merge_lists=False) -> dic
             elif isinstance(v1, list) and isinstance(v2, list):
                 if merge_lists:
                     merged[k] = v1 + v2
-            else:
-                if override:
-                    merged[k] = copy.deepcopy(v2)
+            elif override:
+                merged[k] = copy.deepcopy(v2)
         else:
             merged[k] = copy.deepcopy(v2)
     return merged
@@ -117,19 +116,19 @@ def draw_timestamp(
     text_height = size[0][1]
     line_height = text_height + size[1]
 
-    if position == "tl":
-        text_offset_x = 0
-        text_offset_y = 0 if 0 < line_height else 0 - (line_height + 8)
-    elif position == "tr":
-        text_offset_x = image_width - text_width
-        text_offset_y = 0 if 0 < line_height else 0 - (line_height + 8)
-    elif position == "bl":
+    if position == "bl":
         text_offset_x = 0
         text_offset_y = image_height - (line_height + 8)
     elif position == "br":
         text_offset_x = image_width - text_width
         text_offset_y = image_height - (line_height + 8)
 
+    elif position == "tl":
+        text_offset_x = 0
+        text_offset_y = 0 if line_height > 0 else 0 - (line_height + 8)
+    elif position == "tr":
+        text_offset_x = image_width - text_width
+        text_offset_y = 0 if line_height > 0 else 0 - (line_height + 8)
     if font_effect == "solid":
         # make the coords of the box with a small padding of two pixels
         timestamp_box_coords = np.array(
@@ -183,7 +182,7 @@ def draw_box_with_label(
 ):
     if color is None:
         color = (0, 0, 255)
-    display_text = "{}: {}".format(label, info)
+    display_text = f"{label}: {info}"
     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), color, thickness)
     font_scale = 0.5
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -193,18 +192,18 @@ def draw_box_with_label(
     text_height = size[0][1]
     line_height = text_height + size[1]
     # set the text start position
-    if position == "ul":
-        text_offset_x = x_min
-        text_offset_y = 0 if y_min < line_height else y_min - (line_height + 8)
-    elif position == "ur":
-        text_offset_x = x_max - (text_width + 8)
-        text_offset_y = 0 if y_min < line_height else y_min - (line_height + 8)
-    elif position == "bl":
+    if position == "bl":
         text_offset_x = x_min
         text_offset_y = y_max
     elif position == "br":
         text_offset_x = x_max - (text_width + 8)
         text_offset_y = y_max
+    elif position == "ul":
+        text_offset_x = x_min
+        text_offset_y = 0 if y_min < line_height else y_min - (line_height + 8)
+    elif position == "ur":
+        text_offset_x = x_max - (text_width + 8)
+        text_offset_y = 0 if y_min < line_height else y_min - (line_height + 8)
     # make the coords of the box with a small padding of two pixels
     textbox_coords = (
         (text_offset_x, text_offset_y),
@@ -226,9 +225,7 @@ def calculate_region(frame_shape, xmin, ymin, xmax, ymax, model_size, multiplier
     # size is the longest edge and divisible by 4
     size = int((max(xmax - xmin, ymax - ymin) * multiplier) // 4 * 4)
     # dont go any smaller than the model_size
-    if size < model_size:
-        size = model_size
-
+    size = max(size, model_size)
     # x_offset is midpoint of bounding box minus half the size
     x_offset = int((xmax - xmin) / 2.0 + xmin - size / 2.0)
     # if outside the image
@@ -397,7 +394,7 @@ def yuv_to_3_channel_yuv(yuv_frame):
     uv_count = y_count // 4
 
     # copy the y_channel
-    all_yuv_data[:, :, 0] = yuv_data[0:y_count].reshape((height, width))
+    all_yuv_data[:, :, 0] = yuv_data[:y_count].reshape((height, width))
     # copy the u channel doubling each dimension
     all_yuv_data[:, :, 1] = np.repeat(
         np.reshape(
@@ -457,7 +454,7 @@ def copy_yuv_to_position(
     # clear v2
     destination_frame[v2[1] : v2[3], v2[0] : v2[2]] = 128
 
-    if not source_frame is None:
+    if source_frame is not None:
         # calculate the resized frame, maintaining the aspect ratio
         source_aspect_ratio = source_frame.shape[1] / (source_frame.shape[0] // 3 * 2)
         dest_aspect_ratio = destination_shape[1] / destination_shape[0]
@@ -604,13 +601,7 @@ def intersection_over_union(box_a, box_b):
     box_a_area = (box_a[2] - box_a[0] + 1) * (box_a[3] - box_a[1] + 1)
     box_b_area = (box_b[2] - box_b[0] + 1) * (box_b[3] - box_b[1] + 1)
 
-    # compute the intersection over union by taking the intersection
-    # area and dividing it by the sum of prediction + ground-truth
-    # areas - the interesection area
-    iou = inter_area / float(box_a_area + box_b_area - inter_area)
-
-    # return the intersection over union value
-    return iou
+    return inter_area / float(box_a_area + box_b_area - inter_area)
 
 
 def clipped(obj, frame_shape):
@@ -618,15 +609,12 @@ def clipped(obj, frame_shape):
     # consider the object to be clipped
     box = obj[2]
     region = obj[5]
-    if (
+    return (
         (region[0] > 5 and box[0] - region[0] <= 5)
         or (region[1] > 5 and box[1] - region[1] <= 5)
         or (frame_shape[1] - region[2] > 5 and region[2] - box[2] <= 5)
         or (frame_shape[0] - region[3] > 5 and region[3] - box[3] <= 5)
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def restart_frigate():
@@ -716,9 +704,9 @@ def load_labels(path, encoding="utf-8"):
 
         if lines[0].split(" ", maxsplit=1)[0].isdigit():
             pairs = [line.split(" ", maxsplit=1) for line in lines]
-            labels.update({int(index): label.strip() for index, label in pairs})
+            labels |= {int(index): label.strip() for index, label in pairs}
         else:
-            labels.update({index: line.strip() for index, line in enumerate(lines)})
+            labels |= {index: line.strip() for index, line in enumerate(lines)}
         return labels
 
 
@@ -733,7 +721,7 @@ def clean_camera_user_pass(line: str) -> str:
 def escape_special_characters(path: str) -> str:
     """Cleans reserved characters to encodings for ffmpeg."""
     try:
-        found = re.search(REGEX_RTSP_CAMERA_USER_PASS, path).group(0)[3:-1]
+        found = re.search(REGEX_RTSP_CAMERA_USER_PASS, path)[0][3:-1]
         pw = found[(found.index(":") + 1) :]
         return path.replace(pw, urllib.parse.quote_plus(pw))
     except AttributeError:
@@ -758,7 +746,7 @@ def get_cgroups_version() -> str:
             mount_info = mount.split()
             if mount_info[1] == cgroup_path:
                 fs_type = mount_info[2]
-                if fs_type == "cgroup2fs" or fs_type == "cgroup2":
+                if fs_type in ["cgroup2fs", "cgroup2"]:
                     return "cgroup2"
                 elif fs_type == "tmpfs":
                     return "cgroup"
@@ -859,20 +847,19 @@ def get_bandwidth_stats() -> dict[str, dict]:
 
     if p.returncode != 0:
         return usages
-    else:
-        lines = p.stdout.split("\n")
-        for line in lines:
-            stats = list(filter(lambda a: a != "", line.strip().split("\t")))
-            try:
-                if re.search(
-                    "(^ffmpeg|\/go2rtc|frigate\.detector\.[a-z]+)/([0-9]+)/", stats[0]
-                ):
-                    process = stats[0].split("/")
-                    usages[process[len(process) - 2]] = {
-                        "bandwidth": round(float(stats[1]) + float(stats[2]), 1),
-                    }
-            except:
-                continue
+    lines = p.stdout.split("\n")
+    for line in lines:
+        stats = list(filter(lambda a: a != "", line.strip().split("\t")))
+        try:
+            if re.search(
+                "(^ffmpeg|\/go2rtc|frigate\.detector\.[a-z]+)/([0-9]+)/", stats[0]
+            ):
+                process = stats[0].split("/")
+                usages[process[len(process) - 2]] = {
+                    "bandwidth": round(float(stats[1]) + float(stats[2]), 1),
+                }
+        except:
+            continue
 
     return usages
 
@@ -928,8 +915,6 @@ def get_intel_gpu_stats() -> dict[str, str]:
         return None
     else:
         reading = "".join(p.stdout.split())
-        results: dict[str, str] = {}
-
         # render is used for qsv
         render = []
         for result in re.findall('"Render/3D/0":{[a-z":\d.,%]+}', reading):
@@ -937,11 +922,7 @@ def get_intel_gpu_stats() -> dict[str, str]:
             single = packet.get("busy", 0.0)
             render.append(float(single))
 
-        if render:
-            render_avg = sum(render) / len(render)
-        else:
-            render_avg = 1
-
+        render_avg = sum(render) / len(render) if render else 1
         # video is used for vaapi
         video = []
         for result in re.findall('"Video/\d":{[a-z":\d.,%]+}', reading):
@@ -949,13 +930,11 @@ def get_intel_gpu_stats() -> dict[str, str]:
             single = packet.get("busy", 0.0)
             video.append(float(single))
 
-        if video:
-            video_avg = sum(video) / len(video)
-        else:
-            video_avg = 1
-
-        results["gpu"] = f"{round((video_avg + render_avg) / 2, 2)}%"
-        results["mem"] = "-%"
+        video_avg = sum(video) / len(video) if video else 1
+        results: dict[str, str] = {
+            "gpu": f"{round((video_avg + render_avg) / 2, 2)}%",
+            "mem": "-%",
+        }
         return results
 
 
@@ -976,16 +955,8 @@ def get_nvidia_gpu_stats() -> dict[int, dict]:
             handle = nvml.nvmlDeviceGetHandleByIndex(i)
             meminfo = try_get_info(nvml.nvmlDeviceGetMemoryInfo, handle)
             util = try_get_info(nvml.nvmlDeviceGetUtilizationRates, handle)
-            if util != "N/A":
-                gpu_util = util.gpu
-            else:
-                gpu_util = 0
-
-            if meminfo != "N/A":
-                gpu_mem_util = meminfo.used / meminfo.total * 100
-            else:
-                gpu_mem_util = -1
-
+            gpu_util = util.gpu if util != "N/A" else 0
+            gpu_mem_util = meminfo.used / meminfo.total * 100 if meminfo != "N/A" else -1
             results[i] = {
                 "name": nvml.nvmlDeviceGetName(handle),
                 "gpu": gpu_util,

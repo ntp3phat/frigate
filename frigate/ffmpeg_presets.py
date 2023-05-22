@@ -132,10 +132,7 @@ PRESETS_HW_ACCEL_ENCODE = {
 
 def parse_preset_hardware_acceleration_decode(arg: Any) -> list[str]:
     """Return the correct preset if in preset format otherwise return None."""
-    if not isinstance(arg, str):
-        return None
-
-    return PRESETS_HW_ACCEL_DECODE.get(arg, None)
+    return PRESETS_HW_ACCEL_DECODE.get(arg, None) if isinstance(arg, str) else None
 
 
 def parse_preset_hardware_acceleration_scale(
@@ -153,14 +150,9 @@ def parse_preset_hardware_acceleration_scale(
 
     scale = PRESETS_HW_ACCEL_SCALE.get(arg, "")
 
-    if scale:
-        scale = scale.format(fps, width, height).split(" ")
-        scale.extend(detect_args)
-        return scale
-    else:
-        scale = scale.format(fps, width, height).split(" ")
-        scale.extend(detect_args)
-        return scale
+    scale = scale.format(fps, width, height).split(" ")
+    scale.extend(detect_args)
+    return scale
 
 
 def parse_preset_hardware_acceleration_encode(arg: Any, input: str, output: str) -> str:
@@ -425,10 +417,7 @@ PRESETS_RECORD_OUTPUT = {
 
 def parse_preset_output_record(arg: Any) -> list[str]:
     """Return the correct preset if in preset format otherwise return None."""
-    if not isinstance(arg, str):
-        return None
-
-    return PRESETS_RECORD_OUTPUT.get(arg, None)
+    return PRESETS_RECORD_OUTPUT.get(arg, None) if isinstance(arg, str) else None
 
 
 PRESETS_RTMP_OUTPUT = {
@@ -450,7 +439,4 @@ PRESETS_RTMP_OUTPUT = {
 
 def parse_preset_output_rtmp(arg: Any) -> list[str]:
     """Return the correct preset if in preset format otherwise return None."""
-    if not isinstance(arg, str):
-        return None
-
-    return PRESETS_RTMP_OUTPUT.get(arg, None)
+    return None if not isinstance(arg, str) else PRESETS_RTMP_OUTPUT.get(arg, None)

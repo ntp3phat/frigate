@@ -142,7 +142,7 @@ class MotionDetector:
                 combined_image = cv2.vconcat([image_row_1, image_row_2])
                 cv2.imwrite(f"motion/motion-{self.frame_counter}.jpg", combined_image)
 
-        if len(motion_boxes) > 0:
+        if motion_boxes:
             self.motion_frame_count += 1
             if self.motion_frame_count >= 10:
                 # only average in the current frame if the difference persists for a bit

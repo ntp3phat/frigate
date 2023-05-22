@@ -105,13 +105,10 @@ class ObjectTracker:
             return False
 
         # if the object has exceeded the max_frames setting, deregister
-        if (
+        return (
             obj["motionless_count"] - self.detect_config.stationary.threshold
             > max_frames
-        ):
-            return True
-
-        return False
+        )
 
     def update(self, id, new_obj):
         self.disappeared[id] = 0
@@ -160,7 +157,7 @@ class ObjectTracker:
         # update any tracked objects with labels that are not
         # seen in the current objects and deregister if needed
         for obj in list(self.tracked_objects.values()):
-            if not obj["label"] in new_object_groups:
+            if obj["label"] not in new_object_groups:
                 if self.disappeared[obj["id"]] >= self.max_disappeared:
                     self.deregister(obj["id"])
                 else:
@@ -183,7 +180,7 @@ class ObjectTracker:
                 centroid_y = int((obj["box"][1] + obj["box"][3]) / 2.0)
                 obj["centroid"] = (centroid_x, centroid_y)
 
-            if len(current_objects) == 0:
+            if not current_objects:
                 for index, obj in enumerate(group):
                     self.register(index, obj)
                 continue

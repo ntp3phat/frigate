@@ -99,43 +99,41 @@ class Dispatcher:
         """Callback for detect topic."""
         detect_settings = self.config.cameras[camera_name].detect
 
-        if payload == "ON":
+        if payload == "OFF":
+            if self.camera_metrics[camera_name]["detection_enabled"].value:
+                logger.info(f"Turning off detection for {camera_name}")
+                self.camera_metrics[camera_name]["detection_enabled"].value = False
+                detect_settings.enabled = False
+
+        elif payload == "ON":
             if not self.camera_metrics[camera_name]["detection_enabled"].value:
                 logger.info(f"Turning on detection for {camera_name}")
-                self.camera_metrics[camera_name]["detection_enabled"].value = True
                 detect_settings.enabled = True
 
+                self.camera_metrics[camera_name]["detection_enabled"].value = True
                 if not self.camera_metrics[camera_name]["motion_enabled"].value:
                     logger.info(
                         f"Turning on motion for {camera_name} due to detection being enabled."
                     )
                     self.camera_metrics[camera_name]["motion_enabled"].value = True
                     self.publish(f"{camera_name}/motion/state", payload, retain=True)
-        elif payload == "OFF":
-            if self.camera_metrics[camera_name]["detection_enabled"].value:
-                logger.info(f"Turning off detection for {camera_name}")
-                self.camera_metrics[camera_name]["detection_enabled"].value = False
-                detect_settings.enabled = False
-
         self.publish(f"{camera_name}/detect/state", payload, retain=True)
 
     def _on_motion_command(self, camera_name: str, payload: str) -> None:
         """Callback for motion topic."""
-        if payload == "ON":
-            if not self.camera_metrics[camera_name]["motion_enabled"].value:
-                logger.info(f"Turning on motion for {camera_name}")
-                self.camera_metrics[camera_name]["motion_enabled"].value = True
-        elif payload == "OFF":
+        if payload == "OFF":
             if self.camera_metrics[camera_name]["detection_enabled"].value:
-                logger.error(
-                    f"Turning off motion is not allowed when detection is enabled."
-                )
+                logger.error("Turning off motion is not allowed when detection is enabled.")
                 return
 
             if self.camera_metrics[camera_name]["motion_enabled"].value:
                 logger.info(f"Turning off motion for {camera_name}")
                 self.camera_metrics[camera_name]["motion_enabled"].value = False
 
+        elif payload == "ON":
+            if not self.camera_metrics[camera_name]["motion_enabled"].value:
+                logger.info(f"Turning on motion for {camera_name}")
+                self.camera_metrics[camera_name]["motion_enabled"].value = True
         self.publish(f"{camera_name}/motion/state", payload, retain=True)
 
     def _on_motion_improve_contrast_command(
@@ -164,7 +162,7 @@ class Dispatcher:
     def _on_motion_contour_area_command(self, camera_name: str, payload: int) -> None:
         """Callback for motion contour topic."""
         try:
-            payload = int(payload)
+            payload = payload
         except ValueError:
             f"Received unsupported value for motion contour area: {payload}"
             return
@@ -178,7 +176,7 @@ class Dispatcher:
     def _on_motion_threshold_command(self, camera_name: str, payload: int) -> None:
         """Callback for motion threshold topic."""
         try:
-            payload = int(payload)
+            payload = payload
         except ValueError:
             f"Received unsupported value for motion threshold: {payload}"
             return
@@ -196,7 +194,7 @@ class Dispatcher:
         if payload == "ON":
             if not self.config.cameras[camera_name].record.enabled_in_config:
                 logger.error(
-                    f"Recordings must be enabled in the config to be turned on via MQTT."
+                    "Recordings must be enabled in the config to be turned on via MQTT."
                 )
                 return
 
