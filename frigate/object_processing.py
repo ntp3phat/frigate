@@ -58,10 +58,7 @@ def is_better_thumbnail(current_thumb, new_obj, frame_shape) -> bool:
         return True
 
     # if the area is 10% larger
-    if new_obj["area"] > current_thumb["area"] * 1.1:
-        return True
-
-    return False
+    return new_obj["area"] > current_thumb["area"] * 1.1
 
 
 class TrackedObject:
@@ -141,7 +138,7 @@ class TrackedObject:
         # check each zone
         for name, zone in self.camera_config.zones.items():
             # if the zone is not for this object type, skip
-            if len(zone.objects) > 0 and not obj_data["label"] in zone.objects:
+            if len(zone.objects) > 0 and obj_data["label"] not in zone.objects:
                 continue
             contour = zone.contour
             # check if the object is in the zone
@@ -179,7 +176,7 @@ class TrackedObject:
     def to_dict(self, include_thumbnail: bool = False):
         snapshot_time = (
             self.thumbnail_data["frame_time"]
-            if not self.thumbnail_data is None
+            if self.thumbnail_data is not None
             else 0.0
         )
         event = {
@@ -220,15 +217,12 @@ class TrackedObject:
         ):
             ret, jpg = cv2.imencode(".jpg", np.zeros((175, 175, 3), np.uint8))
 
-        jpg_bytes = self.get_jpg_bytes(
+        if jpg_bytes := self.get_jpg_bytes(
             timestamp=False, bounding_box=False, crop=True, height=175
-        )
-
-        if jpg_bytes:
+        ):
             return jpg_bytes
-        else:
-            ret, jpg = cv2.imencode(".jpg", np.zeros((175, 175, 3), np.uint8))
-            return jpg.tobytes()
+        ret, jpg = cv2.imencode(".jpg", np.zeros((175, 175, 3), np.uint8))
+        return jpg.tobytes()
 
     def get_clean_png(self):
         if self.thumbnail_data is None:
@@ -246,10 +240,7 @@ class TrackedObject:
             return None
 
         ret, png = cv2.imencode(".png", best_frame)
-        if ret:
-            return png.tobytes()
-        else:
-            return None
+        return png.tobytes() if ret else None
 
     def get_jpg_bytes(
         self, timestamp=False, bounding_box=False, crop=False, height=None, quality=70
@@ -320,10 +311,7 @@ class TrackedObject:
         ret, jpg = cv2.imencode(
             ".jpg", best_frame, [int(cv2.IMWRITE_JPEG_QUALITY), quality]
         )
-        if ret:
-            return jpg.tobytes()
-        else:
-            return None
+        return jpg.tobytes() if ret else None
 
 
 def zone_filtered(obj: TrackedObject, object_config):
@@ -526,7 +514,7 @@ class CameraState:
         for id in removed_ids:
             # publish events to mqtt
             removed_obj = tracked_objects[id]
-            if not "end_time" in removed_obj.obj_data:
+            if "end_time" not in removed_obj.obj_data:
                 removed_obj.obj_data["end_time"] = frame_time
                 for c in self.callbacks["end"]:
                     c(self.name, removed_obj, frame_time)
@@ -974,9 +962,7 @@ class TrackedObjectProcessor(threading.Thread):
                     zone_label = self.zone_data[zone][label]
                     if camera in zone_label:
                         current_count = sum(zone_label.values())
-                        zone_label[camera] = (
-                            obj_counter[label] if label in obj_counter else 0
-                        )
+                        zone_label[camera] = obj_counter.get(label, 0)
                         new_count = sum(zone_label.values())
                         if new_count != current_count:
                             self.dispatcher.publish(
@@ -988,18 +974,16 @@ class TrackedObjectProcessor(threading.Thread):
                         # Set the count for the /zone/all topic.
                         total_label_count += new_count
 
-                    # if this is a new zone/label combo for this camera
-                    else:
-                        if label in obj_counter:
-                            zone_label[camera] = obj_counter[label]
-                            self.dispatcher.publish(
-                                f"{zone}/{label}",
-                                obj_counter[label],
-                                retain=False,
-                            )
+                    elif label in obj_counter:
+                        zone_label[camera] = obj_counter[label]
+                        self.dispatcher.publish(
+                            f"{zone}/{label}",
+                            obj_counter[label],
+                            retain=False,
+                        )
 
-                            # Set the count for the /zone/all topic.
-                            total_label_count += obj_counter[label]
+                        # Set the count for the /zone/all topic.
+                        total_label_count += obj_counter[label]
 
                 # if we have previously published a count for this zone all labels
                 zone_label = self.zone_data[zone]["all"]
@@ -1028,4 +1012,4 @@ class TrackedObjectProcessor(threading.Thread):
                 event_id, camera = self.event_processed_queue.get()
                 self.camera_states[camera].finished(event_id)
 
-        logger.info(f"Exiting object processor...")
+        logger.info("Exiting object processor...")

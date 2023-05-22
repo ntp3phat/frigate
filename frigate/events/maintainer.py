@@ -65,7 +65,7 @@ class EventProcessor(threading.Thread):
     def run(self) -> None:
         # set an end_time on events without an end_time on startup
         Event.update(end_time=Event.start_time + 30).where(
-            Event.end_time == None
+            Event.end_time is None
         ).execute()
 
         while not self.stop_event.is_set():
@@ -99,9 +99,9 @@ class EventProcessor(threading.Thread):
 
         # set an end_time on events without an end_time before exiting
         Event.update(end_time=datetime.datetime.now().timestamp()).where(
-            Event.end_time == None
+            Event.end_time is None
         ).execute()
-        logger.info(f"Exiting event processor...")
+        logger.info("Exiting event processor...")
 
     def handle_object_detection(
         self,

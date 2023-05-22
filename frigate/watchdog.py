@@ -39,4 +39,4 @@ class FrigateWatchdog(threading.Thread):
                     logger.info("Detection appears to have stopped. Exiting Frigate...")
                     restart_frigate()
 
-        logger.info(f"Exiting watchdog...")
+        logger.info("Exiting watchdog...")

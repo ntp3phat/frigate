@@ -145,7 +145,7 @@ class OnvifController:
         onvif.get_service("ptz").ContinuousMove(move_request)
 
     def _move_to_preset(self, camera_name: str, preset: str) -> None:
-        if not preset in self.cams[camera_name]["presets"]:
+        if preset not in self.cams[camera_name]["presets"]:
             logger.error(f"{preset} is not a valid preset for {camera_name}")
             return
 
@@ -197,9 +197,7 @@ class OnvifController:
             self._stop(camera_name)
         elif command == OnvifCommandEnum.preset:
             self._move_to_preset(camera_name, param)
-        elif (
-            command == OnvifCommandEnum.zoom_in or command == OnvifCommandEnum.zoom_out
-        ):
+        elif command in [OnvifCommandEnum.zoom_in, OnvifCommandEnum.zoom_out]:
             self._zoom(camera_name, command)
         else:
             self._move(camera_name, command)

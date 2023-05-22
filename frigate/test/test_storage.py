@@ -211,7 +211,7 @@ def _insert_mock_event(id: str, start: int, end: int, retain: bool) -> Event:
         end_time=end,
         top_score=100,
         false_positive=False,
-        zones=list(),
+        zones=[],
         thumbnail="",
         region=[],
         box=[],

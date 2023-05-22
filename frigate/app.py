@@ -133,10 +133,10 @@ class FrigateApp:
         for log, level in self.config.logger.logs.items():
             logging.getLogger(log).setLevel(level.value.upper())
 
-        if not "werkzeug" in self.config.logger.logs:
+        if "werkzeug" not in self.config.logger.logs:
             logging.getLogger("werkzeug").setLevel("ERROR")
 
-        if not "ws4py" in self.config.logger.logs:
+        if "ws4py" not in self.config.logger.logs:
             logging.getLogger("ws4py").setLevel("ERROR")
 
     def init_queues(self) -> None:
@@ -247,10 +247,8 @@ class FrigateApp:
 
             try:
                 largest_frame = max(
-                    [
-                        det.model.height * det.model.width * 3
-                        for (name, det) in self.config.detectors.items()
-                    ]
+                    det.model.height * det.model.width * 3
+                    for (name, det) in self.config.detectors.items()
                 )
                 shm_in = mp.shared_memory.SharedMemory(
                     name=name,
@@ -294,7 +292,7 @@ class FrigateApp:
     def start_video_output_processor(self) -> None:
         output_processor = mp.Process(
             target=output_frames,
-            name=f"output_processor",
+            name="output_processor",
             args=(
                 self.config,
                 self.video_output_queue,
@@ -386,15 +384,14 @@ class FrigateApp:
 
     def check_shm(self) -> None:
         available_shm = round(shutil.disk_usage("/dev/shm").total / 1000000, 1)
-        min_req_shm = 30
-
-        for _, camera in self.config.cameras.items():
-            min_req_shm += round(
+        min_req_shm = 30 + sum(
+            round(
                 (camera.detect.width * camera.detect.height * 1.5 * 9 + 270480)
                 / 1048576,
                 1,
             )
-
+            for _, camera in self.config.cameras.items()
+        )
         if available_shm < min_req_shm:
             logger.warning(
                 f"The current SHM size of {available_shm}MB is too small, recommend increasing it to at least {min_req_shm}MB."
@@ -467,7 +464,7 @@ class FrigateApp:
         self.stop()
 
     def stop(self) -> None:
-        logger.info(f"Stopping...")
+        logger.info("Stopping...")
         self.stop_event.set()
 
         for detector in self.detectors.values():

@@ -85,7 +85,7 @@ class StorageMaintainer(threading.Thread):
         # currently runs cleanup if less than 1 hour of space is left
         # disk_usage should not spin up disks
         hourly_bandwidth = sum(
-            [b["bandwidth"] for b in self.camera_storage_stats.values()]
+            b["bandwidth"] for b in self.camera_storage_stats.values()
         )
         remaining_storage = round(shutil.disk_usage(RECORD_DIR).free / 1000000, 1)
         logger.debug(
@@ -98,7 +98,7 @@ class StorageMaintainer(threading.Thread):
         logger.debug("Starting storage cleanup.")
         deleted_segments_size = 0
         hourly_bandwidth = sum(
-            [b["bandwidth"] for b in self.camera_storage_stats.values()]
+            b["bandwidth"] for b in self.camera_storage_stats.values()
         )
 
         recordings: Recordings = Recordings.select().order_by(
@@ -139,12 +139,7 @@ class StorageMaintainer(threading.Thread):
                     keep = True
                     break
 
-                # if the event ends before this recording segment starts, skip
-                # this event and check the next event for an overlap.
-                # since the events and recordings are sorted, we can skip events
-                # that end before the previous recording segment started on future segments
-                if event.end_time < recording.start_time:
-                    event_start = idx
+                event_start = idx
 
             # Delete recordings not retained indefinitely
             if not keep:
@@ -188,4 +183,4 @@ class StorageMaintainer(threading.Thread):
             if self.check_storage_needs_cleanup():
                 self.reduce_storage_consumption()
 
-        logger.info(f"Exiting storage maintainer...")
+        logger.info("Exiting storage maintainer...")

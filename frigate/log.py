@@ -44,7 +44,7 @@ def root_configurer(queue: Queue) -> None:
 
 
 def log_process(log_queue: Queue) -> None:
-    threading.current_thread().name = f"logger"
+    threading.current_thread().name = "logger"
     setproctitle("frigate.logger")
     listener_configurer()
 
@@ -82,8 +82,7 @@ class LogPipe(threading.Thread):
 
     def cleanup_log(self, log: str) -> str:
         """Cleanup the log line to remove sensitive info and string tokens."""
-        log = clean_camera_user_pass(log).strip("\n")
-        return log
+        return clean_camera_user_pass(log).strip("\n")
 
     def fileno(self) -> int:
         """Return the write file descriptor of the pipe"""

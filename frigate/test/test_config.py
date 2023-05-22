@@ -675,7 +675,7 @@ class TestConfig(unittest.TestCase):
         runtime_config = frigate_config.runtime_config()
         ffmpeg_cmds = runtime_config.cameras["back"].ffmpeg_cmds
         assert len(ffmpeg_cmds) == 1
-        assert not "clips" in ffmpeg_cmds[0]["roles"]
+        assert "clips" not in ffmpeg_cmds[0]["roles"]
 
     def test_max_disappeared_default(self):
         config = {

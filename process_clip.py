@@ -298,28 +298,24 @@ def process(path, label, output, debug_path):
     )
 
     if output:
-        # now we will open a file for writing
-        data_file = open(output, "w")
+        with open(output, "w") as data_file:
+            # create the csv writer object
+            csv_writer = csv.writer(data_file)
 
-        # create the csv writer object
-        csv_writer = csv.writer(data_file)
+            # Counter variable used for writing
+            # headers to the CSV file
+            count = 0
 
-        # Counter variable used for writing
-        # headers to the CSV file
-        count = 0
+            for result in results:
+                if count == 0:
 
-        for result in results:
-            if count == 0:
+                    # Writing headers of CSV file
+                    header = ["file"] + list(result[1].keys())
+                    csv_writer.writerow(header)
+                    count += 1
 
-                # Writing headers of CSV file
-                header = ["file"] + list(result[1].keys())
-                csv_writer.writerow(header)
-                count += 1
-
-            # Writing data of CSV file
-            csv_writer.writerow([result[0]] + list(result[1].values()))
-
-        data_file.close()
+                # Writing data of CSV file
+                csv_writer.writerow([result[0]] + list(result[1].values()))
 
 
 if __name__ == "__main__":

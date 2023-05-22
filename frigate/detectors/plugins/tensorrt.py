@@ -103,9 +103,7 @@ class TensorRtDetector(DetectionApi):
                 trt.nptype(self.engine.get_binding_dtype(binding)),
             )
         else:
-            raise ValueError(
-                "bad dims of binding %s: %s" % (binding, str(binding_dims))
-            )
+            raise ValueError(f"bad dims of binding {binding}: {str(binding_dims)}")
 
     def _allocate_buffers(self):
         """Allocates all host/device in/out buffers required for an engine."""
@@ -122,9 +120,7 @@ class TensorRtDetector(DetectionApi):
                 # implicit batch case (TensorRT 6 or older)
                 size = trt.volume(binding_dims) * self.engine.max_batch_size
             else:
-                raise ValueError(
-                    "bad dims of binding %s: %s" % (binding, str(binding_dims))
-                )
+                raise ValueError(f"bad dims of binding {binding}: {str(binding_dims)}")
             nbytes = size * self.engine.get_binding_dtype(binding).itemsize
             # Allocate host and device buffers
             err, host_mem = cuda.cuMemHostAlloc(
@@ -172,7 +168,7 @@ class TensorRtDetector(DetectionApi):
         if not self.context.execute_async_v2(
             bindings=self.bindings, stream_handle=self.stream
         ):
-            logger.warn(f"Execute returned false")
+            logger.warn("Execute returned false")
 
         # Transfer predictions back from the GPU.
         [
@@ -263,9 +259,7 @@ class TensorRtDetector(DetectionApi):
             dets = o.reshape((-1, 7))
             dets = dets[dets[:, 4] * dets[:, 6] >= conf_th]
             detections.append(dets)
-        detections = np.concatenate(detections, axis=0)
-
-        return detections
+        return np.concatenate(detections, axis=0)
 
     def detect_raw(self, tensor_input):
         # Input tensor has the shape of the [height, width, 3]

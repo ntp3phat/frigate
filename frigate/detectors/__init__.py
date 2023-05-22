@@ -18,7 +18,7 @@ def create_detector(detector_config):
             "CPU detectors are not recommended and should only be used for testing or for trial purposes."
         )
 
-    api = api_types.get(detector_config.type)
-    if not api:
+    if api := api_types.get(detector_config.type):
+        return api(detector_config)
+    else:
         raise ValueError(detector_config.type)
-    return api(detector_config)

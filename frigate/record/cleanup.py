@@ -117,12 +117,7 @@ class RecordingCleanup(threading.Thread):
                         keep = True
                         break
 
-                    # if the event ends before this recording segment starts, skip
-                    # this event and check the next event for an overlap.
-                    # since the events and recordings are sorted, we can skip events
-                    # that end before the previous recording segment started on future segments
-                    if event.end_time < recording.start_time:
-                        event_start = idx
+                    event_start = idx
 
                 # Delete recordings outside of the retention window or based on the retention mode
                 if (
@@ -170,14 +165,13 @@ class RecordingCleanup(threading.Thread):
             datetime.datetime.now().timestamp()
             - SECONDS_IN_DAY * self.config.record.retain.days
         )
-        delete_before = {}
-
-        for name, camera in self.config.cameras.items():
-            delete_before[name] = (
+        delete_before = {
+            name: (
                 datetime.datetime.now().timestamp()
                 - SECONDS_IN_DAY * camera.record.retain.days
             )
-
+            for name, camera in self.config.cameras.items()
+        }
         # find all the recordings older than the oldest recording in the db
         try:
             oldest_recording = Recordings.select().order_by(Recordings.start_time).get()
@@ -220,14 +214,12 @@ class RecordingCleanup(threading.Thread):
         # get all recordings files on disk
         files_on_disk = []
         for root, _, files in os.walk(RECORD_DIR):
-            for file in files:
-                files_on_disk.append(os.path.join(root, file))
-
-        recordings_to_delete = []
-        for recording in recordings.objects().iterator():
-            if not recording.path in files_on_disk:
-                recordings_to_delete.append(recording.id)
-
+            files_on_disk.extend(os.path.join(root, file) for file in files)
+        recordings_to_delete = [
+            recording.id
+            for recording in recordings.objects().iterator()
+            if recording.path not in files_on_disk
+        ]
         logger.debug(
             f"Deleting {len(recordings_to_delete)} recordings with missing files"
         )
@@ -247,7 +239,7 @@ class RecordingCleanup(threading.Thread):
         # Expire tmp clips every minute, recordings and clean directories every hour.
         for counter in itertools.cycle(range(self.config.record.expire_interval)):
             if self.stop_event.wait(60):
-                logger.info(f"Exiting recording cleanup...")
+                logger.info("Exiting recording cleanup...")
                 break
             self.clean_tmp_clips()
 

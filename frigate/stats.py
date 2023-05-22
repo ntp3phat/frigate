@@ -113,17 +113,13 @@ def get_processing_stats(
 
 async def set_cpu_stats(all_stats: dict[str, Any]) -> None:
     """Set cpu usage from top."""
-    cpu_stats = get_cpu_stats()
-
-    if cpu_stats:
+    if cpu_stats := get_cpu_stats():
         all_stats["cpu_usages"] = cpu_stats
 
 
 async def set_bandwidth_stats(all_stats: dict[str, Any]) -> None:
     """Set bandwidth from nethogs."""
-    bandwidth_stats = get_bandwidth_stats()
-
-    if bandwidth_stats:
+    if bandwidth_stats := get_bandwidth_stats():
         all_stats["bandwidth_usages"] = bandwidth_stats
 
 
@@ -158,10 +154,7 @@ async def set_gpu_stats(
             # known erroring args should automatically return as error
             stats["error-gpu"] = {"gpu": -1, "mem": -1}
         elif "cuvid" in args or "nvidia" in args:
-            # nvidia GPU
-            nvidia_usage = get_nvidia_gpu_stats()
-
-            if nvidia_usage:
+            if nvidia_usage := get_nvidia_gpu_stats():
                 for i in range(len(nvidia_usage)):
                     stats[nvidia_usage[i]["name"]] = {
                         "gpu": str(round(float(nvidia_usage[i]["gpu"]), 2)) + "%",
@@ -172,10 +165,7 @@ async def set_gpu_stats(
                 stats["nvidia-gpu"] = {"gpu": -1, "mem": -1}
                 hwaccel_errors.append(args)
         elif "qsv" in args:
-            # intel QSV GPU
-            intel_usage = get_intel_gpu_stats()
-
-            if intel_usage:
+            if intel_usage := get_intel_gpu_stats():
                 stats["intel-qsv"] = intel_usage
             else:
                 stats["intel-qsv"] = {"gpu": -1, "mem": -1}
@@ -184,23 +174,16 @@ async def set_gpu_stats(
             driver = os.environ.get(DRIVER_ENV_VAR)
 
             if driver == DRIVER_AMD:
-                # AMD VAAPI GPU
-                amd_usage = get_amd_gpu_stats()
-
-                if amd_usage:
+                if amd_usage := get_amd_gpu_stats():
                     stats["amd-vaapi"] = amd_usage
                 else:
                     stats["amd-vaapi"] = {"gpu": -1, "mem": -1}
                     hwaccel_errors.append(args)
+            elif intel_usage := get_intel_gpu_stats():
+                stats["intel-vaapi"] = intel_usage
             else:
-                # intel VAAPI GPU
-                intel_usage = get_intel_gpu_stats()
-
-                if intel_usage:
-                    stats["intel-vaapi"] = intel_usage
-                else:
-                    stats["intel-vaapi"] = {"gpu": -1, "mem": -1}
-                    hwaccel_errors.append(args)
+                stats["intel-vaapi"] = {"gpu": -1, "mem": -1}
+                hwaccel_errors.append(args)
         elif "v4l2m2m" in args or "rpi" in args:
             # RPi v4l2m2m is currently not able to get usage stats
             stats["rpi-v4l2m2m"] = {"gpu": -1, "mem": -1}
@@ -308,4 +291,4 @@ class StatsEmitter(threading.Thread):
             )
             self.dispatcher.publish("stats", json.dumps(stats), retain=False)
             logger.debug("Finished stats collection")
-        logger.info(f"Exiting stats emitter...")
+        logger.info("Exiting stats emitter...")
